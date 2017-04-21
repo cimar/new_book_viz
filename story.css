@@ -77,3 +77,20 @@ a:hover {
     display: none;
   }
 }
+
+
+
+/* STORY */
+
+.chart__gender {
+  width: 90%;
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.chart__gender svg {
+  background: purple;
+}
+
+
+

@@ -85,11 +85,11 @@ a:hover {
 .chart__gender {
   width: 90%;
   max-width: 800px;
-  margin: 2rem auto;
+  margin: auto;
 }
 
 .chart__gender svg {
-  background: purple;
+  background: lightblue;
 }
 
 

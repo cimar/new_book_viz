@@ -461,7 +461,7 @@
 	}
 
 	function updateSmultChart() {
-		var margin = {top:25,bottom:10,left:33,right:10} //figure out how to get these from the css/dom
+		var margin = {top:25,bottom:10,left:33,right:20} //figure out how to get these from the css/dom
 		const ratio = 1.5;
 		svg_width = (chartSmult.node().offsetWidth)/4.5;
 		svg_height = svg_width;
@@ -507,8 +507,8 @@
 		drawSmultAxes(g)
 
 		g.selectAll(".genre__label")
-			.attr("y", height - 15)
-			.attr("x", width - 6)
+			.attr("y", height)
+			.attr("x", width)
 
 		g.select(".zero")
 			.attr("y1", smultScales.y(d3.timeParse("%Y")("1945")))

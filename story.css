@@ -104,6 +104,16 @@ svg {
   margin: auto;
 }
 
+.chart__smult svg {
+  margin: .25rem;
+}
+
+.smult__value{
+  font: 11px sans-serif;
+  fill: white;
+}
+
+
 .chart__gender {
   width: 90%;
   max-width: 800px;

@@ -31,6 +31,14 @@
 	var chartSmult = d3.select('.chart__smult');
 
 
+// GENDER TRANSITION
+
+/*	function genderTransition() {
+		value = d3.select('input[name="genre__scale"]:checked').node().value;
+		setupGenderChart(value)
+		updateGenderChart(value)
+	}	*/
+
 // CLEANING FNS
 
 	function cleanGenderRow(row) {
@@ -149,13 +157,14 @@
 	}
 
 	function makeChartElementsGender(svg) {
-		var layer = svg.selectAll(".area")
+		var g = svg.append('g')
+			.attr("class","container"); //should this be select?
+
+		var layer = g.selectAll(".area")
 			.data(genderStack(genderData))
 			.enter()
 		  	.append("path")
 		      .attr("class", "area")	
-
-		var g = svg.append('g');
 
 		g.append('g')
 			.attr('class', 'axis axis--x');
@@ -213,13 +222,15 @@
 	}
 
 	function makeChartElementsGenre(svg) {
-		var layer = svg.selectAll(".area")
+		var g = svg.append('g')
+			.attr("class","container");
+
+		var layer = g.selectAll(".area")
 			.data(genreStack(genreData))
 			.enter()
 		  	.append("path")
 		      .attr("class", "area")	
 
-		var g = svg.append('g');
 		g.append('g')
 			.attr('class', 'axis axis--x');
 		g.append('g')
@@ -248,8 +259,10 @@
 		makeChartElementsGenre(svg)		
 	}
 
+	//SMULT HELPERS
+
 	function setupSmultScales() {
-		smultScales.y = d3.scaleTime().domain([d3.timeParse("%Y")("1950"),d3.timeParse("%Y")("2020")]);
+		smultScales.y = d3.scaleTime().domain([d3.timeParse("%Y")("1945"),d3.timeParse("%Y")("2025")]);
   		smultScales.x = d3.scaleLinear().domain(d3.extent([-1, 1]));
 	}
 
@@ -279,6 +292,49 @@
       		.attr("class", "bar women")
       	bars.append("rect")
     		.attr("class", "bar men")
+
+
+    	//ADD LABEL FOR EACH SVG
+
+    	svg.append("text")
+			.attr("class","genre__label")
+			.style("text-anchor", "end")
+			.style("font-weight","bold")
+			.text(function(d) { 
+				console.log(d)
+				return d.key; 
+			});
+
+
+    	//ADD VALUE LABELS
+    	bars.append("text")
+		    .attr("class", "smult__value")
+		    .text(function(d){
+		        if (d.percent_w >= d.percent_m){
+		          return d3.format(".0%")(d.percent_w);
+		        } else {
+		          return d3.format(".0%")(d.percent_m);
+		        }
+		    })
+		    .attr("text-anchor", function(d){
+		      	if (d.percent_w >= d.percent_m){
+		          return "end";
+		        } else {
+		          return "start";
+		        }
+		    })
+
+
+		//ADD AXES
+		svg.append("g")
+    		.attr("class", "axis axis--y")
+
+    	svg.append("g")
+ 			.attr("class", "axis axis--x")
+
+ 		svg.append("line")
+ 			.attr("class", "zero")
+
 	}
 
 
@@ -299,10 +355,10 @@
 	function drawGenderAxes(svg, height){
 		var xaxis = svg.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisTop(genderScales.x))
+			.call(d3.axisBottom(genderScales.x))
 
 		var yaxis = svg.select(".axis--y")
-			.call(d3.axisRight(genderScales.y).ticks(10))
+			.call(d3.axisLeft(genderScales.y).ticks(10))
 		// If axisBottom and axisLeft, the ticks get cut off by 
 		// the svg's boundaries. If I add padding on the svg
 		// in the CSS it looks funny -- I probably should be 
@@ -312,10 +368,10 @@
 	function drawGenreAxes(svg){
 		var xaxis = svg.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisTop(genreScales.x))
+			.call(d3.axisBottom(genreScales.x))
 
 		var yaxis = svg.select(".axis--y")
-			.call(d3.axisRight(genreScales.y).ticks(10))
+			.call(d3.axisLeft(genreScales.y).ticks(10))
 
 		console.log(yaxis)
 		// If axisBottom and axisLeft, the ticks get cut off by 
@@ -327,42 +383,58 @@
 	function getBandwidth() {
 		var dom = smultScales.y
 		console.log(smultScales)
-      	r = dom(d3.timeParse("%Y")("2020")) - dom(d3.timeParse("%Y")("1950"));
+      	r = dom(d3.timeParse("%Y")("2025")) - dom(d3.timeParse("%Y")("1945"));
     
       	console.log(r)
-      	return Math.abs(r/7.0);
+      	return Math.abs(r/8.5);
   	}
 
 
 	function updateGenderChart() {
+		margin = {top:10,bottom:25,left:25,right:10}
 		const ratio = 1.5;
-		width = chartGender.node().offsetWidth;
-		height = Math.floor(width / ratio);
+		svg_width = chartGender.node().offsetWidth
+		svg_height =  Math.floor(svg_width / ratio)
+		width = svg_width - margin.left - margin.right;
+		height = svg_height - margin.top - margin.bottom;
 		
-		var svg = chartGender.select('svg');
+		var svg = chartGender.select('svg')
+			.attr('width', svg_width)
+			.attr('height', svg_height);
 
-		svg.attr('width', width)
+		var g = svg.select('.container')
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+		g.attr('width', width)
 			.attr('height', height);
 
 		updateGenderScales(width,height)
 
 		// redraw elements
-		drawGenderAxes(svg,height)
+		drawGenderAxes(g,height)
 
-		var layer = svg.selectAll(".area")
+		var layer = g.selectAll(".area")
 				.attr("d", genderArea)
 		      	.style("fill", function(d) { return genderScales.z(d.key); })
 
 	}
 
 	function updateGenreChart() {
+		margin = {top:10,bottom:25,left:25,right:10}
 		const ratio = 1.5;
-		width = chartGenre.node().offsetWidth;
-		height = Math.floor(width / ratio);
+		svg_width = chartGender.node().offsetWidth
+		svg_height =  Math.floor(svg_width / ratio)
+		width = svg_width - margin.left - margin.right;
+		height = svg_height - margin.top - margin.bottom;
 		
-		var svg = chartGenre.select('svg');
+		var svg = chartGenre.select('svg')
+			.attr('width', svg_width)
+			.attr('height', svg_height);
 
-		svg.attr('width', width)
+		var g = svg.select('.container')
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+		g.attr('width', width)
 			.attr('height', height);
 
 		updateGenreScales(width,height)
@@ -377,41 +449,78 @@
 
 	function updateSmultScales(width,height){
 		smultScales.x.range([0, width]);
-		smultScales.y.range([height,0]);
+		smultScales.y.range([0, height]);
+	}
+
+	function drawSmultAxes(g){
+		g.select('.axis--y')
+	    	.call(d3.axisLeft(smultScales.y).ticks(7));
+
+  		g.select('.axis--x')
+		    .call(d3.axisTop(smultScales.x).ticks(6, "%"));
 	}
 
 	function updateSmultChart() {
-		var margin = {"left":.5, "top":0}; //figure out how to get these from the css/dom
+		var margin = {top:25,bottom:10,left:33,right:10} //figure out how to get these from the css/dom
 		const ratio = 1.5;
-		width = (chartSmult.node().offsetWidth)/4;
-		height = width;
+		svg_width = (chartSmult.node().offsetWidth)/4.5;
+		svg_height = svg_width;
+		width = svg_width - margin.left - margin.right
+		height = svg_height - margin.top - margin.bottom
+
 		
 		var svg = chartSmult.selectAll('svg.mult');
-		svg.attr('width', width-margin.left) // not sure how margin works, still...
-			.attr('height', height)
+		svg.attr('width', svg_width) // not sure how margin works, still...
+			.attr('height', svg_height)
 
-      	console.log("hot potato")
-      	updateSmultScales((width-margin.left),height)
+		var g = svg.select(".container")
+		.attr("height",height)
+		.attr("width",width)
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
 
-		var g = svg.selectAll('g')
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+		console.log("hot potato")
+      	updateSmultScales(width,height)
 
 		var bars = g.selectAll(".bar")
 			.attr("y", function(d) { return smultScales.y(d.decade);})
       		.attr("height", getBandwidth()) // MAKE A BANDWIDTH FN
 
       	console.log("bars",bars)
-      	var wbars = svg.selectAll(".bar.women")
+      	var wbars = g.selectAll(".bar.women")
       		.attr("x", function(d) { return smultScales.x(0); })
       		.attr("width", function(d) { return Math.abs(smultScales.x(0) - smultScales.x(d.percent_w)); });
 	
-      	var mbars = svg.selectAll(".bar.men")
+      	var mbars = g.selectAll(".bar.men")
 	      	.attr("x", function(d) { return smultScales.x(-1*d.percent_m); })
     		.attr("width", function(d) { return Math.abs(smultScales.x(0) - smultScales.x(d.percent_m)); });
+
+    	g.selectAll(".smult__value")
+    		.attr("y", function(d) { return (smultScales.y(d.decade) + getBandwidth()/2 +5);})
+		    .attr("x", function(d) {
+		        if (d.percent_w >= d.percent_m){
+		          return smultScales.x((+d.percent_w - .04));
+		        } else {
+		          return smultScales.x(-1*(+d.percent_m - .04));
+		        }
+		    })
+
+		drawSmultAxes(g)
+
+		g.selectAll(".genre__label")
+			.attr("y", height - 15)
+			.attr("x", width - 6)
+
+		g.select(".zero")
+			.attr("y1", smultScales.y(d3.timeParse("%Y")("1945")))
+			.attr("x1", smultScales.x(0))
+			.attr("y2", smultScales.y(d3.timeParse("%Y")("2025")))
+			.attr("x2", smultScales.x(0))
+			.style("stroke", "black");
+
 	}
 
 	function setup() {
-		setupGenderChart('count')
+		setupGenderChart('percent')
 		setupGenreChart()
 		setupSmultChart()	
 	}

@@ -83,7 +83,25 @@ a:hover {
 /* STORY */
 
 svg {
+  background: lightblue;
+}
+
+.bar.women {
+  fill: steelblue;
+}
+
+.bar.men {
+  fill: grey;
+}
+
+.container {
   background: yellow;
+}
+
+.chart__smult {
+  width: 90%;
+  max-width: 800px;
+  margin: auto;
 }
 
 .chart__gender {

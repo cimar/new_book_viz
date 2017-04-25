@@ -22,6 +22,8 @@
       		.style("opacity", 0);
     var active_gen = "percent"
     var other_gen = "count"
+    var oldLayer = null
+    var newLayer = null
 
 
 	var genreWidth = 0;
@@ -167,13 +169,13 @@
 	function makeChartElementsGender(svg) {
 		var g = svg.select('.container'); //should this be select?
 
-		var layer = g.selectAll(".area")
-			.data(genderStack(genderData))
-			.enter()
+		oldLayer = g.selectAll(".area")
+			.data(genderStack(genderData));
 
-		//layer.exit().remove();
+		oldLayer.exit().remove();
 
-		layer.append("path")
+		newLayer = oldLayer.enter()
+			.append("path")
 		      .attr("class", "area")	
 
 		g.select(".x-axis").remove();
@@ -425,9 +427,14 @@
 		// redraw elements
 		drawGenderAxes(g,height)
 
-		var layer = g.selectAll(".area")
-				.attr("d", genderArea)
-		      	.style("fill", function(d) { return genderScales.z(d.key); })
+//		newLayer.attr("d", genderArea)
+//		      .style("fill", function(d) { return genderScales.z(d.key); })
+
+		oldLayer.merge(newLayer)
+			.transition()
+			.duration(1000)
+			.attr("d", genderArea)
+		      .style("fill", function(d) { return genderScales.z(d.key); })
 
 
 

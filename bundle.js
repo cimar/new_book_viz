@@ -15,6 +15,14 @@
 	var genderCountColumns = ["female","male"]
 	var genderPercentColumns = ["femalePercent","malePercent"]
 	var chartGender = d3.select('.chart__gender');
+	var genderTT = d3.select("body")
+    		.append("div") 
+      		.attr("class", "tooltip")  
+      		.style("z-index", "19")     
+      		.style("opacity", 0);
+    var active_gen = "percent"
+    var other_gen = "count"
+
 
 	var genreWidth = 0;
 	var genreHeight = 0;
@@ -33,11 +41,14 @@
 
 // GENDER TRANSITION
 
-/*	function genderTransition() {
-		value = d3.select('input[name="genre__scale"]:checked').node().value;
-		setupGenderChart(value)
-		updateGenderChart(value)
-	}	*/
+	function genderTransition() {
+		console.log("insideTransition!")
+		var temp = active_gen
+		active_gen = other_gen
+		other_gen = temp
+		setupGenderChart(active_gen)
+		updateGenderChart(active_gen)
+	}
 
 // CLEANING FNS
 
@@ -79,7 +90,6 @@
  	}
 
  	function cleanSmultRow(row) {
- 		console.log(row)
  		var target = {}
 		count_women = +row.count;
 		genre_total = count_women/(+row.percent);
@@ -88,7 +98,6 @@
 	    	target["percent_m"] = 1 - +row.percent;
 			target["decade"] = d3.timeParse('%Y')(row.decade);
 			target["genre"] = row.genre;
-	  		console.log("tar",target)
 	  		return target
 	  	}
 	}
@@ -125,7 +134,6 @@
 
 		q.awaitAll(function(error, response) {
 			if (error) throw error;
-			console.log(response)
 			genderData = response[0]
 			genderData.columns = genderColumns
 			genreData = response[1]
@@ -157,14 +165,19 @@
 	}
 
 	function makeChartElementsGender(svg) {
-		var g = svg.append('g')
-			.attr("class","container"); //should this be select?
+		var g = svg.select('.container'); //should this be select?
 
 		var layer = g.selectAll(".area")
 			.data(genderStack(genderData))
 			.enter()
-		  	.append("path")
+
+		//layer.exit().remove();
+
+		layer.append("path")
 		      .attr("class", "area")	
+
+		g.select(".x-axis").remove();
+		g.select(".y-axis").remove();
 
 		g.append('g')
 			.attr('class', 'axis axis--x');
@@ -183,6 +196,7 @@
 	//SET UP GENDER
 
 	function setupGenderChart(cp) {
+		console.log("cp",cp)
 		// set up the DOM elements
   		var keys = getKeys(cp)//genderData.columns.slice(1);
 		genderStack = d3.stack()
@@ -200,6 +214,7 @@
 		    .y1(function(d) { return genderScales.y(d[1]); });
 
 		makeChartElementsGender(svg)
+
 	}
 
 	// GENRE HELPERS
@@ -382,16 +397,13 @@
 
 	function getBandwidth() {
 		var dom = smultScales.y
-		console.log(smultScales)
       	r = dom(d3.timeParse("%Y")("2025")) - dom(d3.timeParse("%Y")("1945"));
-    
-      	console.log(r)
-      	return Math.abs(r/8.5);
+    	return Math.abs(r/9);
   	}
 
 
 	function updateGenderChart() {
-		margin = {top:10,bottom:25,left:25,right:10}
+		margin = {top:10,bottom:25,left:28,right:10}
 		const ratio = 1.5;
 		svg_width = chartGender.node().offsetWidth
 		svg_height =  Math.floor(svg_width / ratio)
@@ -417,10 +429,17 @@
 				.attr("d", genderArea)
 		      	.style("fill", function(d) { return genderScales.z(d.key); })
 
+
+
+		svg.on("click", function(d){
+			console.log("hey!")
+			genderTransition()
+		})
+
 	}
 
 	function updateGenreChart() {
-		margin = {top:10,bottom:25,left:25,right:10}
+		margin = {top:10,bottom:25,left:28,right:10}
 		const ratio = 1.5;
 		svg_width = chartGender.node().offsetWidth
 		svg_height =  Math.floor(svg_width / ratio)
@@ -478,14 +497,12 @@
 		.attr("width",width)
 		.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
 
-		console.log("hot potato")
       	updateSmultScales(width,height)
 
 		var bars = g.selectAll(".bar")
 			.attr("y", function(d) { return smultScales.y(d.decade);})
       		.attr("height", getBandwidth()) // MAKE A BANDWIDTH FN
 
-      	console.log("bars",bars)
       	var wbars = g.selectAll(".bar.women")
       		.attr("x", function(d) { return smultScales.x(0); })
       		.attr("width", function(d) { return Math.abs(smultScales.x(0) - smultScales.x(d.percent_w)); });

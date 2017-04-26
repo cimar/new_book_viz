@@ -7,33 +7,38 @@
 	var margin = { top:10, bottom:25, left:28, right:10 }
 	var ratio = 1.5;
 
-	var state = 'percent';
+	var original_state = 'percent';
+	var state = original_state;
+	var other_state = 'count';
 	
 	var chart = d3.select('.chart__gender');
 	var svg = chart.select('svg');
+    var vertical = null
 	var tooltip = d3.select("body")
     		.append("div") 
       		.attr("class", "tooltip")  
       		.style("z-index", "19")     
       		.style("opacity", 0);
 
+    const bisectDate = d3.bisector(d => d.date).left;
     
+
 	
 	// TRANSITION
 	function transition() {
 		console.log("insideTransition!")
-		var temp = active_gen
-		active_gen = other_gen
-		other_gen = temp
-		setupChart(active_gen)
-		updateChart(active_gen)
+		var temp = state
+		state = other_state
+		other_state = temp
+		console.log(state)
+		updateChart()
 	}
 
 	// CLEANING FNS
 
 	function cleaRow(row) {
-		var male = +row.Male;
 		var female = +row.Female;
+		var male = +row.Male;
 		var total = male + female;
 
 		return {
@@ -77,7 +82,7 @@
 		var percentY = d3.scaleLinear();
 
 		var percentColor = d3.scaleOrdinal(d3.schemeCategory20)
-			.domain(['male_count', 'female_count']);
+			.domain(['male_percent', 'female_percent']);
 
 		scales.percent = { x: percentX,  y: percentY, color: percentColor };
 	}
@@ -90,6 +95,14 @@
 
 		g.append('g')
 			.attr('class', 'axis axis--y');
+
+		vertical = g.append("g")
+    		.append("rect")
+      		.attr("class", "vertical")
+      		.attr("width", 1)
+      		.attr("x", 0)
+      		.style("stroke", "#e7e7e7")
+      		.style("opacity", 0);
 	}
 	
 	//UPDATE
@@ -110,13 +123,10 @@
 			.call(d3.axisLeft(scales[state].y)
 				.ticks(10)
 			)
-		// If axisBottom and axisLeft, the ticks get cut off by 
-		// the svg's boundaries. If I add padding on the svg
-		// in the CSS it looks funny -- I probably should be 
-		// fetching that element from the dom somewhere
 	}
 
 	function updateChart() {
+		console.log(state)
 		var w = chart.node().offsetWidth;
 		var h = Math.floor(w / ratio);
 		
@@ -135,27 +145,55 @@
 
 		updateScales(width, height)
 
-		// redraw elements
-		drawAxes(g, height)
-
-		// todo russell
 		var area = d3.area()
 		    .x(function(d) { return scales[state].x(d.data.date); })
 		    .y0(function(d) { return scales[state].y(d[0]); })
 		    .y1(function(d) { return scales[state].y(d[1]); });
 
-		stack.keys(['male_' + state, 'female_' + state])
+		stack.keys(['female_' + state, 'male_' + state])
 
 		var stackedData = stack(genderData)
 
+		console.log(stackedData)
+
 		var layer = g.selectAll('.area')
 			.data(stackedData)
-		.enter().append('path')
+
+		layer.exit().remove()
+		
+		var enterLayer = layer.enter()
+			.append('path')
 			.attr('class', 'area')
 
-		layer
-			.attr('d', area)
+		setupElements()
+		drawAxes(g, height)
+
+		vertical.attr("height", height)
+      		.attr("y", margin.top)
+
+		enterLayer.on("mousemove", function(d) {
+			console.log("the mouse is moving! OH GOD")
+			k = d.key
+		    mousex = d3.mouse(this)
+		    mousex = mousex[0]
+		/*    var invertedx = x.invert(mousex)
+		    var i = bisectDate(d_array, invertedx, 1)
+
+			d0 = d_array[i - 1],
+			d1 = d_array[i],
+			d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;
+		*/
+			console.log("d",d)
+			console.log("key",k)
+		})
+
+	    layer.merge(enterLayer)
+	    	.transition()
+	    	.duration(1000)
+	    	.attr('d', area)
 	      	.style('fill', function(d) { return scales[state].color(d.key); })
+
+
 
 		svg.on('click', function(d){
 			console.log('hey hey hey!')
@@ -165,7 +203,6 @@
 
 	function setup() {
 		setupScales()
-		setupElements()
 	}
 
 	function resize() {

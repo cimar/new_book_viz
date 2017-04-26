@@ -2,23 +2,22 @@
 
 	//VARS
 	var genderData = null;
-	var width = 0;
-	var height = 0;
 	var scales = {};
-	var stack = null;
-	var area = null;
-	var columns = ["dateStr","date","male","female","total","malePercent","femalePercent"]
-	var countColumns = ["female","male"]
-	var percentColumns = ["femalePercent","malePercent"]
+	var stack = d3.stack();
+	var margin = { top:10, bottom:25, left:28, right:10 }
+	var ratio = 1.5;
+
+	var state = 'percent';
+	
 	var chart = d3.select('.chart__gender');
+	var svg = chart.select('svg');
 	var tooltip = d3.select("body")
     		.append("div") 
       		.attr("class", "tooltip")  
       		.style("z-index", "19")     
       		.style("opacity", 0);
 
-    var active_gen = "percent"
-    var other_gen = "count"
+    
 	
 	// TRANSITION
 	function transition() {
@@ -40,11 +39,11 @@
 		return {
 			dateStr: row.date,
 			date: d3.timeParse('%Y')(row.date),
-			male: male,
-			female: female,
+			male_count: male,
+			female_count: female,
 			total: total,
-			malePercent: male / total,
-			femalePercent: female / total
+			male_percent: male / total,
+			female_percent: female / total
 		}
 	}
 
@@ -58,94 +57,59 @@
 	
 	//SETUP
 	//GENDER HELPERS
+	function setupScales() {
+		var maxCount = d3.max(genderData,function(d) { return d.total; });
 
-	function setupScales(keys, cp) {
-		maxy=0
-		if (cp=='count') {
-			maxy = d3.max(genderData,function(d) { return d.total; })
-		} else {
-			if (cp=='percent') {
-				maxy = 1;
-			}
-		}
-		scales.x = d3.scaleTime()
+		var countX = d3.scaleTime()
 			.domain(d3.extent(genderData, function(d) { return d.date; }));
-		scales.y = d3.scaleLinear()
-			.domain([0,maxy]);
-		scales.z = d3.scaleOrdinal(d3.schemeCategory20)
-		scales.z.domain(keys)
+
+		var countY = d3.scaleLinear()
+			.domain([0, maxCount]);
+
+		var countColor = d3.scaleOrdinal(d3.schemeCategory20)
+			.domain(['male_count', 'female_count']);
+
+		scales.count = { x: countX,  y: countY, color: countColor };
+
+		var percentX = d3.scaleTime()
+			.domain(d3.extent(genderData, function(d) { return d.date; }));
+
+		var percentY = d3.scaleLinear();
+
+		var percentColor = d3.scaleOrdinal(d3.schemeCategory20)
+			.domain(['male_count', 'female_count']);
+
+		scales.percent = { x: percentX,  y: percentY, color: percentColor };
 	}
 
-	function makeChartElements(svg) {
-		var g = svg.select('.container'); //should this be select?
-
-		var layer = g.selectAll(".area")
-			.data(stack(genderData))
-			.enter()
-
-		//layer.exit().remove();
-
-		layer.append("path")
-		      .attr("class", "area")	
-
-		g.select(".x-axis").remove();
-		g.select(".y-axis").remove();
+	function setupElements() {
+		var g = svg.select('.container');
 
 		g.append('g')
 			.attr('class', 'axis axis--x');
+
 		g.append('g')
 			.attr('class', 'axis axis--y');
 	}
-
-	function getKeys(cp) {
-		if(cp == "count"){
-			return countColumns
-		} else {
-			return percentColumns
-		}
-	}
-
-	//SET UP GENDER
-
-	function setupChart(cp) {
-		console.log("cp",cp)
-		// set up the DOM elements
-  		var keys = getKeys(cp)//data.columns.slice(1);
-		stack = d3.stack()
-		stack.keys(keys)
-		console.log('keys',keys)
-		console.log('stack',stack(genderData))
-		var svg = chart.select('svg');
-
-		// setup scales
-		setupScales(keys,cp)
-
-		area = d3.area()
-		    .x(function(d, i) { return scales.x(d.data.date); })
-		    .y0(function(d) { return scales.y(d[0]); })
-		    .y1(function(d) { return scales.y(d[1]); });
-
-		makeChartElements(svg)
-
-	}
 	
 	//UPDATE
-
-	//HELPERS
-
-	function updateScales(width,height){
-		scales.x.range([0, width]);
-		scales.y.range([height,0]);
+	function updateScales(width, height){
+		scales.count.x.range([0, width]);
+		scales.percent.x.range([0, width]);
+		scales.count.y.range([height, 0]);
+		scales.percent.y.range([height, 0]);
 	}
 
 
-	function drawAxes(svg, height){
-		var xaxis = svg.select(".axis--x")
+	function drawAxes(g, height){
+		var xAxis = g.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisBottom(scales.x))
+			.call(d3.axisBottom(scales[state].x))
 
-		var yaxis = svg.select(".axis--y")
-			.call(d3.axisLeft(scales.y).ticks(10))
+		var yAxis = g.select(".axis--y")
+			.call(d3.axisLeft(scales[state].y)
+				.ticks(10)
+			)
 		// If axisBottom and axisLeft, the ticks get cut off by 
 		// the svg's boundaries. If I add padding on the svg
 		// in the CSS it looks funny -- I probably should be 
@@ -153,43 +117,55 @@
 	}
 
 	function updateChart() {
-		margin = {top:10,bottom:25,left:28,right:10}
-		const ratio = 1.5;
-		svg_width = chart.node().offsetWidth
-		svg_height =  Math.floor(svg_width / ratio)
-		width = svg_width - margin.left - margin.right;
-		height = svg_height - margin.top - margin.bottom;
+		var w = chart.node().offsetWidth;
+		var h = Math.floor(w / ratio);
 		
-		var svg = chart.select('svg')
-			.attr('width', svg_width)
-			.attr('height', svg_height);
+		var width = w - margin.left - margin.right;
+		var height = h - margin.top - margin.bottom;
+		
+		svg
+			.attr('width', w)
+			.attr('height', h);
+
+		var translate = "translate(" + margin.left + "," + margin.top + ")";
 
 		var g = svg.select('.container')
-				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+		
+		g.attr("transform", translate)
 
-		g.attr('width', width)
-			.attr('height', height);
-
-		updateScales(width,height)
+		updateScales(width, height)
 
 		// redraw elements
-		drawAxes(g,height)
+		drawAxes(g, height)
 
-		var layer = g.selectAll(".area")
-				.attr("d", area)
-		      	.style("fill", function(d) { return scales.z(d.key); })
+		// todo russell
+		var area = d3.area()
+		    .x(function(d) { return scales[state].x(d.data.date); })
+		    .y0(function(d) { return scales[state].y(d[0]); })
+		    .y1(function(d) { return scales[state].y(d[1]); });
 
+		stack.keys(['male_' + state, 'female_' + state])
 
+		var stackedData = stack(genderData)
 
-		svg.on("click", function(d){
-			console.log("hey!")
+		var layer = g.selectAll('.area')
+			.data(stackedData)
+		.enter().append('path')
+			.attr('class', 'area')
+
+		layer
+			.attr('d', area)
+	      	.style('fill', function(d) { return scales[state].color(d.key); })
+
+		svg.on('click', function(d){
+			console.log('hey hey hey!')
 			transition()
 		})
-
 	}
 
 	function setup() {
-		setupChart('percent')
+		setupScales()
+		setupElements()
 	}
 
 	function resize() {
@@ -198,7 +174,6 @@
 
 	function init() {
 		loadData(function() {
-			console.log("gender",genderData)
 			setup()
 			resize()
 			window.addEventListener('resize', resize)

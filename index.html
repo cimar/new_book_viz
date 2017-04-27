@@ -227,10 +227,14 @@
 		</div>
 		<div class='chart__gender'>
 			<svg><g class='container'></g></svg>
-			 <form id="gender_form" action="">
-				<input type="radio" name="gender__scale" value="count" onclick="genderTransition()">count</input>
-				<input type="radio" name="gender__scale" value="percent" onclick="genderTransition()" checked>percent</input>
-  			</form>
+			<ul class='gender__toggle'>
+				<li>
+					<button class='toggle__button is-active' value='count'>Count</button>
+				</li>
+				<li>
+					<button class='toggle__button' value='percent'>Percent</button>
+				</li>
+			</ul>
 		</div>
 		<div class='story__text'>
 			<p>To answer this question, I looked at the gender of the authors of books on the New York Times Best Sellers List over time.</p>

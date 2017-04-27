@@ -6,6 +6,7 @@
 	var stack = d3.stack();
 	var margin = { top:10, bottom:25, left:28, right:10 }
 	var ratio = 1.5;
+	var transitionDuration = 1000;
 
 	var original_state = 'percent';
 	var state = original_state;
@@ -115,14 +116,14 @@
 
 
 	function drawAxes(g, height){
-		var xAxis = g.select(".axis--x")
+		g.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
 			.call(d3.axisBottom(scales[state].x))
 
-		var yAxis = g.select(".axis--y")
-			.call(d3.axisLeft(scales[state].y)
-				.ticks(10)
-			)
+		g.select(".axis--y")
+			.transition()
+			.duration(transitionDuration)
+			.call(d3.axisLeft(scales[state].y).ticks(10))
 	}
 
 	function updateChart() {
@@ -189,20 +190,24 @@
 
 	    layer.merge(enterLayer)
 	    	.transition()
-	    	.duration(1000)
+	    	.duration(transitionDuration)
 	    	.attr('d', area)
 	      	.style('fill', function(d) { return scales[state].color(d.key); })
 
+	}
 
+	function handleToggle() {
+		state = this.value
+		updateChart()
+	}
 
-		svg.on('click', function(d){
-			console.log('hey hey hey!')
-			transition()
-		})
+	function setupEvents() {
+		chart.selectAll('.toggle__button').on('click', handleToggle)
 	}
 
 	function setup() {
 		setupScales()
+		setupEvents()
 	}
 
 	function resize() {

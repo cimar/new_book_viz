@@ -110,6 +110,14 @@ main {
 .chart__gender svg {
 }
 
+.gender__toggle li {
+  display: inline-block;
+}
+
+.gender__toggle .toggle__button {
+  padding: 0.25rem;
+}
+
 .story__text {
   /* russ */
   max-width: 35rem;

@@ -7,6 +7,8 @@
 	var margin = { top:10, bottom:25, left:50, right:10 }
 	var ratio = 1.5;
 	var transitionDuration = 1000;
+	var mouseTransitionDuration = 50
+	var tooltipTransitionDuration = 500
 
 	var original_state = 'percent';
 	var state = original_state;
@@ -15,14 +17,9 @@
 	
 	var chart = d3.select('.chart__gender');
 	var svg = chart.select('svg');
-	var tooltip = d3.select("body")
-    		.append("div") 
-      		.attr("class", "tooltip")  
-      		.style("z-index", "19")     
-      		.style("opacity", 0);
 
     const bisectDate = d3.bisector(d => d.date).left;
-    
+    	//I think the "left" means I can't access the very last column of the stacked area chart?
 
 	
 	// TRANSITION
@@ -112,8 +109,16 @@
     	  		.attr("class", "vertical")
       			.attr("width", 1)
       			.attr("x", 0)
-      			.style("stroke", "#e7e7e7")
+      			.style("stroke", "white")
       			.style("opacity", 0);
+      	}
+
+      	var tooltip = chart.select(".toolitp")
+      	if(tooltip.empty()){
+      		chart.append("div") 
+      		.attr("class", "tooltip")  
+      		.style("z-index", "19")     
+      		.style("opacity", 0);
       	}
 	}
 	
@@ -176,15 +181,13 @@
 	function drawFiftyPercent(g) {
 		var line = d3.line()
 			.x(function(d) {
-				console.log(d.date); 
 				return scales[state].x(d.date)
 			})
 			.y(function(d) {
-				console.log("huh?",(state == 'percent')) 
 				if (state == 'percent'){
 					return scales[state].y(.5)
 				} else {
-					return scales[state].y((d["female_count"]+d["male_count"])/2)
+					return scales[state].y((d["total"])/2)
 				}
 			})
 
@@ -205,8 +208,50 @@
 		return fif
 	}
 
+	function handleMouseMove(d) {
+		key = d.key
+		console.log("moving mouse",key)
+		d_array = genderData
+	    mousex = d3.mouse(this)
+	    mousex = mousex[0]
+	    var invertedx = scales[state].x.invert(mousex)
+	    var i = bisectDate(d_array, invertedx, 1)
+
+		d0 = d_array[i - 1],
+		d1 = d_array[i],
+		d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;
+		
+		chart.select(".vertical")
+			.transition()
+			.duration(mouseTransitionDuration)
+			.attr("x",(scales[state].x(d.date)))
+			.style("opacity",1)
+
+		var val = d[key]
+		if(state == 'percent'){
+			val = d3.format(".0%")(d[key])
+		}
+
+		chart.select(".tooltip")
+			.style("opacity", .9)
+    		.html(key+" selected!<br/>"+val+"<br/><h3>"+d3.timeFormat("%Y")(d.date)+"</h3>")
+       		.style("left", (d3.event.pageX + 7) + "px")
+       		.style("top", (d3.event.pageY - 80) + "px")
+	}
+
+	function handleMouseOut() {
+		chart.select(".vertical")
+			.transition()
+			.duration(transitionDuration)
+			.style("opacity",0)
+
+		chart.select(".tooltip")
+			.transition()
+			.duration(tooltipTransitionDuration)
+			.style("opacity",0)
+	}
+
 	function updateChart() {
-		console.log(state)
 		var w = chart.node().offsetWidth;
 		var h = Math.floor(w / ratio);
 		
@@ -253,31 +298,7 @@
 
 		vertical = g.select(".vertical")
 			.attr("height", height)
-      		.attr("y", margin.top)
-
-		enterLayer.on("mousemove", function(d) {
-/*			fif.transition()
-					.duration(200)
-					.style("opacity",.9)*/
-			console.log("d",d)
-			k = d.key
-			d_array = genderData
-		    mousex = d3.mouse(this)
-		    mousex = mousex[0]
-		    var invertedx = scales[state].x.invert(mousex)
-/*		    var i = bisectDate(d_array, invertedx, 1)
-
-			d0 = d_array[i - 1],
-			d1 = d_array[i],
-			d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;*/
-		
-			console.log("key",k)
-		})
-		    .on("mouseout", function(d) {
-	/*	        fif.transition()
-		          .duration(500)
-		          .style("opacity", 0);*/
-		    });
+      		.attr("y", 0)
 
 	    layer.merge(enterLayer)
 	    	.transition()
@@ -286,6 +307,8 @@
 	      	.style('fill', function(d) { return scales[state].color(d.key); })
 
 	}
+
+
 
 	function handleToggle() {
 		if (this.value != state) {
@@ -298,6 +321,16 @@
 		chart.selectAll('.toggle__button').on('click', handleToggle)
 	}
 
+	function updateEvents() {
+
+		// got to attach the event to the area paths so you
+		// can retrieve "key" off of bound "d"
+
+		var area = chart.selectAll('.area')
+		area.on('mousemove',handleMouseMove)
+			.on('mouseout',handleMouseOut)
+	}
+
 	function setup() {
 		setupScales()
 		setupEvents()
@@ -305,6 +338,7 @@
 
 	function resize() {
 		updateChart()
+		updateEvents()
 	}
 
 	function init() {

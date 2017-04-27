@@ -118,6 +118,10 @@ main {
   padding: 0.25rem;
 }
 
+.gender__toggle .toggle__button .is-active {
+  fill: black;
+}
+
 .story__text {
   /* russ */
   max-width: 35rem;

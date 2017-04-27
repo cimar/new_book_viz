@@ -4,17 +4,17 @@
 	var genderData = null;
 	var scales = {};
 	var stack = d3.stack();
-	var margin = { top:10, bottom:25, left:28, right:10 }
+	var margin = { top:10, bottom:25, left:50, right:10 }
 	var ratio = 1.5;
 	var transitionDuration = 1000;
 
 	var original_state = 'percent';
 	var state = original_state;
 	var other_state = 'count';
+	var state_labels = {'count':'Count of books', 'percent':'Percent of books'}
 	
 	var chart = d3.select('.chart__gender');
 	var svg = chart.select('svg');
-    var vertical = null
 	var tooltip = d3.select("body")
     		.append("div") 
       		.attr("class", "tooltip")  
@@ -91,19 +91,30 @@
 	function setupElements() {
 		var g = svg.select('.container');
 
-		g.append('g')
-			.attr('class', 'axis axis--x');
+		var xAxis = g.select('.axis--x')
 
-		g.append('g')
+		if(xAxis.empty()){
+			g.append('g')
+				.attr('class', 'axis axis--x');
+		}
+
+		var yAxis = g.select('.axis--y')
+
+		if(yAxis.empty()){
+			g.append('g')
 			.attr('class', 'axis axis--y');
+		}
 
-		vertical = g.append("g")
-    		.append("rect")
-      		.attr("class", "vertical")
-      		.attr("width", 1)
-      		.attr("x", 0)
-      		.style("stroke", "#e7e7e7")
-      		.style("opacity", 0);
+		var vert = g.select(".vertical")
+
+		if(vert.empty()){
+			g.append("rect")
+    	  		.attr("class", "vertical")
+      			.attr("width", 1)
+      			.attr("x", 0)
+      			.style("stroke", "#e7e7e7")
+      			.style("opacity", 0);
+      	}
 	}
 	
 	//UPDATE
@@ -124,6 +135,74 @@
 			.transition()
 			.duration(transitionDuration)
 			.call(d3.axisLeft(scales[state].y).ticks(10))
+	}
+
+	function drawLabels(g, width, height){
+		var yable = svg.select(".y--label")
+
+		if (yable.empty()){
+			yable = svg.append("text")
+				.attr("class","axis y--label")
+				.attr("text-anchor","middle")
+				.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
+		}
+
+		yable.transition()
+			.duration(transitionDuration)
+			.text(state_labels[state])
+
+		var wable = g.select(".area__label__women")
+
+		if (wable.empty()){
+			g.append("text")
+				.attr("class","area__label__women")
+				.attr("x", .9*width)
+				.attr("y", .75*height)
+				.style("text-anchor", "end")
+				.text("Women");
+		}
+		var mable = g.select(".area__label__men")
+
+		if (mable.empty()){
+			g.append("text")
+				.attr("class","area__label__men")
+				.attr("x", .9*width)
+				.attr("y", .25*height)
+				.style("text-anchor", "end")
+				.text("Men");
+		}
+	}
+
+	function drawFiftyPercent(g) {
+		var line = d3.line()
+			.x(function(d) {
+				console.log(d.date); 
+				return scales[state].x(d.date)
+			})
+			.y(function(d) {
+				console.log("huh?",(state == 'percent')) 
+				if (state == 'percent'){
+					return scales[state].y(.5)
+				} else {
+					return scales[state].y((d["female_count"]+d["male_count"])/2)
+				}
+			})
+
+		var fif = g.select(".fiftyper")
+
+		if (fif.empty()) {
+			fif = g.append("path")
+				.attr("class","fiftyper")
+				.attr("fill","none")
+				.attr("stroke", "white")
+				.attr("stroke-width",2)
+		}
+
+		fif.datum(genderData)
+			.transition()
+			.duration(transitionDuration)
+			.attr("d",line)
+		return fif
 	}
 
 	function updateChart() {
@@ -168,25 +247,37 @@
 
 		setupElements()
 		drawAxes(g, height)
+		drawLabels(g, width, height)
 
-		vertical.attr("height", height)
+		var fif = drawFiftyPercent(g)
+
+		vertical = g.select(".vertical")
+			.attr("height", height)
       		.attr("y", margin.top)
 
 		enterLayer.on("mousemove", function(d) {
-			console.log("the mouse is moving! OH GOD")
+/*			fif.transition()
+					.duration(200)
+					.style("opacity",.9)*/
+			console.log("d",d)
 			k = d.key
+			d_array = genderData
 		    mousex = d3.mouse(this)
 		    mousex = mousex[0]
-		/*    var invertedx = x.invert(mousex)
-		    var i = bisectDate(d_array, invertedx, 1)
+		    var invertedx = scales[state].x.invert(mousex)
+/*		    var i = bisectDate(d_array, invertedx, 1)
 
 			d0 = d_array[i - 1],
 			d1 = d_array[i],
-			d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;
-		*/
-			console.log("d",d)
+			d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;*/
+		
 			console.log("key",k)
 		})
+		    .on("mouseout", function(d) {
+	/*	        fif.transition()
+		          .duration(500)
+		          .style("opacity", 0);*/
+		    });
 
 	    layer.merge(enterLayer)
 	    	.transition()
@@ -197,8 +288,10 @@
 	}
 
 	function handleToggle() {
-		state = this.value
-		updateChart()
+		if (this.value != state) {
+			state = this.value
+			updateChart()
+		}
 	}
 
 	function setupEvents() {

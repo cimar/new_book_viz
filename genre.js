@@ -12,30 +12,47 @@
 	// CLEANING FNS
 
 	function cleanRow(row, i, cols) {
-		var target = {}
- 		var total = 0
-		// 		target.dateStr = row.date
-		target.date = d3.timeParse('%Y')(row.date)
-		for (var i = 1, n = cols.length; i < n; ++i){
-			field = cols[i]
-			target[field] = +row[field]
-			total = total + +row[field]
-		}
-		target["total"] = total
-		/*		target["count"]["total"] = total
-		target["count"]["columns"] = count_cols
-		for (var i = 1, n = cols.length; i < n; ++i){
-			field = cols[i]
-			target["percent"][field] = +row[field]/total
-		}
-		console.log("target")*/
-		return target;
+		var columns = cols.slice(1, cols.length)
+
+		var values = columns.map(function(columName) {
+			return +row[columName];
+		})
+
+		var total = d3.sum(values)
+
+		var things = columns.map(function(columName, i) {
+			var out = {};
+			out[columName + 'Count'] = values[i];
+			out[columName + 'Percent'] = values[i] / total;
+			return out;
+		});
+
+		
+		// var target = {}
+ 	// 	var total = 0
+		// // 		target.dateStr = row.date
+		// target.date = d3.timeParse('%Y')(row.date)
+		// for (var i = 1, n = cols.length; i < n; ++i){
+		// 	field = cols[i]
+		// 	target[field] = +row[field]
+		// 	total = total + +row[field]
+		// }
+		// target["total"] = total
+		// /*		target["count"]["total"] = total
+		// target["count"]["columns"] = count_cols
+		// for (var i = 1, n = cols.length; i < n; ++i){
+		// 	field = cols[i]
+		// 	target["percent"][field] = +row[field]/total
+		// }
+		// console.log("target")*/
+		// return target;
  	}
 
 
 	// LOAD THE DATA
 	function loadData(cb) {
 		d3.tsv('assets/genre_count.tsv', cleanRow, function(err, data) {
+			console.log(data)
 			genreData = data
 			cb()
 		});
@@ -85,8 +102,8 @@
   		var keys = genreData.columns.slice(1);
 		stack = d3.stack()
 		stack.keys(keys)
-		console.log('keys',keys)
-		console.log('stack',stack(genreData))
+		// console.log('keys',keys)
+		// console.log('stack',stack(genreData))
 		var svg = chart.select('svg');
 
 		// setup scales
@@ -119,7 +136,7 @@
 		var yaxis = svg.select(".axis--y")
 			.call(d3.axisLeft(scales.y).ticks(10))
 
-		console.log(yaxis)
+		// console.log(yaxis)
 		// If axisBottom and axisLeft, the ticks get cut off by 
 		// the svg's boundaries. If I add padding on the svg
 		// in the CSS it looks funny -- I probably should be 
@@ -164,7 +181,7 @@
 
 	function init() {
 		loadData(function() {
-			console.log("genre",genreData)
+			// console.log("genre",genreData)
 			setup()
 			resize()
 			window.addEventListener('resize', resize)

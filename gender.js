@@ -10,10 +10,8 @@
 	var mouseTransitionDuration = 50
 	var tooltipTransitionDuration = 500
 
-	var original_state = 'percent';
-	var state = original_state;
-	var other_state = 'count';
-	var state_labels = {'count':'Count of books', 'percent':'Percent of books'}
+	var state = 'percent';
+	var labels = {'count':'Count of books', 'percent':'Percent of books'}
 	
 	var chart = d3.select('.chart__gender');
 	var svg = chart.select('svg');
@@ -21,19 +19,8 @@
     const bisectDate = d3.bisector(d => d.date).left;
     	//I think the "left" means I can't access the very last column of the stacked area chart?
 
-	
-	// TRANSITION
-	function transition() {
-		console.log("insideTransition!")
-		var temp = state
-		state = other_state
-		other_state = temp
-		console.log(state)
-		updateChart()
-	}
 
 	// CLEANING FNS
-
 	function cleaRow(row) {
 		var female = +row.Female;
 		var male = +row.Male;
@@ -88,38 +75,31 @@
 	function setupElements() {
 		var g = svg.select('.container');
 
-		var xAxis = g.select('.axis--x')
+		g.append('g').attr('class', 'axis axis--x');
 
-		if(xAxis.empty()){
-			g.append('g')
-				.attr('class', 'axis axis--x');
-		}
+		g.append('g').attr('class', 'axis axis--y');
 
-		var yAxis = g.select('.axis--y')
+		g.append("rect")
+	  		.attr("class", "vertical")
+  			.attr("width", 1)
+  			.attr("x", 0)
+  			.style("stroke", "white")
+  			.style("opacity", 0);
 
-		if(yAxis.empty()){
-			g.append('g')
-			.attr('class', 'axis axis--y');
-		}
+  		svg.append("text")
+			.attr("class","label--y")
+			.attr("text-anchor","middle")
 
-		var vert = g.select(".vertical")
+		svg.append("text")
+			.attr("class","label--x")
+			.attr("text-anchor","middle")
 
-		if(vert.empty()){
-			g.append("rect")
-    	  		.attr("class", "vertical")
-      			.attr("width", 1)
-      			.attr("x", 0)
-      			.style("stroke", "white")
-      			.style("opacity", 0);
-      	}
-
-      	var tooltip = chart.select(".toolitp")
-      	if(tooltip.empty()){
-      		chart.append("div") 
+      	chart.append("div") 
       		.attr("class", "tooltip")  
       		.style("z-index", "19")     
       		.style("opacity", 0);
-      	}
+
+
 	}
 	
 	//UPDATE
@@ -143,19 +123,13 @@
 	}
 
 	function drawLabels(g, width, height){
-		var yable = svg.select(".y--label")
-
-		if (yable.empty()){
-			yable = svg.append("text")
-				.attr("class","axis y--label")
-				.attr("text-anchor","middle")
-				.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
-		}
-
-		yable.transition()
+		svg.select('.label--y')
+			.text(labels[state])
+		.transition()
 			.duration(transitionDuration)
-			.text(state_labels[state])
+			.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
 
+		// rosie fix these labels to only be created on setup like above
 		var wable = g.select(".area__label__women")
 
 		if (wable.empty()){
@@ -290,7 +264,6 @@
 			.append('path')
 			.attr('class', 'area')
 
-		setupElements()
 		drawAxes(g, height)
 		drawLabels(g, width, height)
 
@@ -319,32 +292,22 @@
 
 	function setupEvents() {
 		chart.selectAll('.toggle__button').on('click', handleToggle)
-	}
-
-	function updateEvents() {
-
-		// got to attach the event to the area paths so you
-		// can retrieve "key" off of bound "d"
-
-		var area = chart.selectAll('.area')
-		area.on('mousemove',handleMouseMove)
+		
+		chart.selectAll('.area')
+			.on('mousemove',handleMouseMove)
 			.on('mouseout',handleMouseOut)
-	}
-
-	function setup() {
-		setupScales()
-		setupEvents()
 	}
 
 	function resize() {
 		updateChart()
-		updateEvents()
 	}
 
 	function init() {
 		loadData(function() {
-			setup()
-			resize()
+			setupElements()
+			setupScales()
+			resize() // draw chart
+			setupEvents()
 			window.addEventListener('resize', resize)
 		})
 	}

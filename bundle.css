@@ -107,6 +107,38 @@ main {
   background: red;
 }
 
+.chart__gender .fifty-percent {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.5;
+  stroke-width: 1px;
+  stroke-dasharray: 4px 4px;
+}
+
+.chart__gender .vertical {
+  fill: #fff;
+  fill-opacity: 0.5;
+}
+
+.chart__gender text {
+  font-family: 'Atlas Grotesk Web', Arial, sans-serif;
+  font-size: 12px;
+}
+
+.chart__gender text.area__label {
+  font-size: 16px;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+} 
+
+.chart__gender .axis path {
+  display:  none;
+}
+
+.chart__gender .axis text {
+    font-size: 10px;
+}
 .chart__genre {
   width: 90%;
   max-width: 800px;
@@ -116,16 +148,26 @@ main {
 .chart__gender svg {
 }
 
-.gender__toggle li {
-  display: inline-block;
+.toggle {
+  margin: 1rem auto;
+  text-align: center;
 }
 
-.genre__toggle li {
+.toggle li {
   display: inline-block;
 }
 
 .toggle__button {
-  padding: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #000;
+}
+
+.toggle__button.is-active {
+  background-color: red;
 }
 
 

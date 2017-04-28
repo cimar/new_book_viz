@@ -158,9 +158,9 @@
 	    	.duration(transitionDuration)
 	    	.attr('d', area)
 	      	.style("fill", function(d) { 
-		      		var key = d.key.split('_')[0]
-		      		return scales.color(key);
-		      	})
+	      		var key = d.key.split('_')[0]
+	      		return scales.color(key);
+	      	})
 	}
 
 	function handleToggle() {

@@ -54,20 +54,19 @@
 		var countY = d3.scaleLinear()
 			.domain([0, maxCount]);
 
-		var countColor = d3.scaleOrdinal(d3.schemeCategory20)
-			.domain(['male_count', 'female_count']);
-
-		scales.count = { x: countX,  y: countY, color: countColor };
+		scales.count = { x: countX,  y: countY };
 
 		var percentX = d3.scaleTime()
 			.domain(d3.extent(genderData, function(d) { return d.date; }));
 
 		var percentY = d3.scaleLinear();
 
-		var percentColor = d3.scaleOrdinal(d3.schemeCategory20)
-			.domain(['male_percent', 'female_percent']);
+		scales.percent = { x: percentX,  y: percentY };
 
-		scales.percent = { x: percentX,  y: percentY, color: percentColor };
+		scales.color = d3.scaleOrdinal()
+			.domain(['male_count', 'female_count'])
+			.range(['#ccc', '#666']);
+		
 	}
 
 	function setupElements() {
@@ -83,7 +82,6 @@
 	  		.attr("class", "vertical")
   			.attr("width", 1)
   			.attr("x", 0)
-  			.style("stroke", "white")
 
   		svg.append("text")
 			.attr("class","label--y")
@@ -94,12 +92,12 @@
 			.attr("text-anchor","middle")
 
 		g.append("text")
-			.attr("class","area__label__men")
+			.attr("class","area__label area__label--men")
 			.style("text-anchor", "end")
 			.text("Men");
 
 		g.append("text")
-			.attr("class","area__label__women")
+			.attr("class","area__label area__label--women")
 			.style("text-anchor", "end")
 			.text("Women");
 	}
@@ -131,13 +129,13 @@
 			.duration(transitionDuration)
 			.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
 
-		g.select(".area__label__women")
+		g.select(".area__label--women")
 			.transition()
 			.duration(transitionDuration)
 			.attr("x", .95 * width)
 			.attr("y", .95 * height)
 
-		g.select(".area__label__men")
+		g.select(".area__label--men")
 			.transition()
 			.duration(transitionDuration)
 			.attr("x", .95 * width)
@@ -158,14 +156,11 @@
 				}
 			})
 
-		var fif = g.select(".fiftyper")
+		var fif = g.select(".fifty-percent")
 
 		if (fif.empty()) {
 			fif = g.append("path")
-				.attr("class","fiftyper")
-				.attr("fill","none")
-				.attr("stroke", "white")
-				.attr("stroke-width",2)
+				.attr("class","fifty-percent")
 		}
 
 		fif.datum(genderData)
@@ -253,8 +248,6 @@
 
 		var stackedData = stack(genderData)
 
-		console.log(stackedData)
-
 		var container = chart.select('.area-container')
 
 		var layer = container.selectAll('.area')
@@ -279,7 +272,10 @@
 	    	.transition()
 	    	.duration(transitionDuration)
 	    	.attr('d', area)
-	      	.style('fill', function(d) { return scales[state].color(d.key); })
+	      	.style("fill", function(d) { 
+	      		var key = d.key.split('_')[0]
+	      		return scales.color(key);
+	      	})
 
 	}
 
@@ -288,6 +284,10 @@
 	function handleToggle() {
 		if (this.value != state) {
 			state = this.value
+			chart.selectAll('.toggle__button')
+				.classed('is-active', false)
+
+			d3.select(this).classed('is-active', true)
 			updateChart()
 		}
 	}

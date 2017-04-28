@@ -4,7 +4,9 @@
 	var genderData = null;
 	var scales = {};
 	var stack = d3.stack();
-	var margin = { top:10, bottom:25, left:50, right:10 }
+	var margin = { top:10, bottom:25, left:50, right:10 };
+	var width = 0;
+	var height = 0;
 	var ratio = 1.5;
 	var transitionDuration = 1000;
 	var mouseTransitionDuration = 50
@@ -15,10 +17,6 @@
 	
 	var chart = d3.select('.chart__gender');
 	var svg = chart.select('svg');
-
-    const bisectDate = d3.bisector(d => d.date).left;
-    	//I think the "left" means I can't access the very last column of the stacked area chart?
-
 
 	// CLEANING FNS
 	function cleaRow(row) {
@@ -86,7 +84,6 @@
   			.attr("width", 1)
   			.attr("x", 0)
   			.style("stroke", "white")
-  			.style("opacity", 0);
 
   		svg.append("text")
 			.attr("class","label--y")
@@ -105,12 +102,6 @@
 			.attr("class","area__label__women")
 			.style("text-anchor", "end")
 			.text("Women");
-
-
-      	chart.append("div") 
-      		.attr("class", "tooltip")  
-      		.style("z-index", "19")     
-      		.style("opacity", 0);
 	}
 	
 	//UPDATE
@@ -185,54 +176,60 @@
 	}
 
 	function handleMouseMove(d) {
-		key = d.key
-		console.log("moving mouse",key)
-		d_array = genderData
-	    mousex = d3.mouse(this)
-	    mousex = mousex[0]
-	    var invertedx = scales[state].x.invert(mousex)
-	    var i = bisectDate(d_array, invertedx, 1)
+		var key = d.key
+	    var mouse = d3.mouse(this)
+	    var mouseX = mouse[0]
+	    var mouseY = mouse[1]
+	    var invertedX = scales[state].x.invert(mouseX)
 
-		d0 = d_array[i - 1],
-		d1 = d_array[i],
-		d = invertedx - d0.date > d1.date - invertedx ? d1 : d0;
+	    var bisectDate = d3.bisector(d => d.date).left;
+
+	    var index = bisectDate(genderData, invertedX, 1)
+
+		var d0 = genderData[index - 1];
+		var d1 = genderData[index];
+		
+		var d = invertedX - d0.date > d1.date - invertedX ? d1 : d0;
 		
 		chart.select(".vertical")
-			.transition()
-			.duration(mouseTransitionDuration)
-			.attr("x",(scales[state].x(d.date)))
-			.style("opacity",1)
+			.attr("x",(scales[state].x(d.date)));
 
-		var val = d[key]
-		if(state == 'percent'){
-			val = d3.format(".0%")(d[key])
-		}
-
-		chart.select(".tooltip")
-			.style("opacity", .9)
-    		.html(key+" selected!<br/>"+val+"<br/><h3>"+d3.timeFormat("%Y")(d.date)+"</h3>")
-       		.style("left", (d3.event.pageX + 7) + "px")
-       		.style("top", (d3.event.pageY - 80) + "px")
+		var val = d[key];
+		var displayValue = state === 'percent' ? d3.format(".0%")(val) : val;
+		var displayYear = +d3.timeFormat("%Y")(d.date);
+		var displayGender = key.split('_')[0];
+		
+		chart.select(".tooltip--gender").text(displayGender);
+		chart.select(".tooltip--year").text(displayYear);
+		chart.select(".tooltip--value").text(displayValue);
+       	
+       	var isLeft = mouseX < width / 2
+       	var xOff = scales[state].x(d.date)
+       	var yOff = mouseY + margin.top
+       	chart.select('.tooltip')
+       		.style("right", isLeft ? 'auto' : width - xOff + margin.right + 'px')
+       		.style("left", isLeft ? xOff + margin.left + 'px' : "auto")
+       		.style("top",  yOff + "px");
 	}
 
 	function handleMouseOut() {
-		chart.select(".vertical")
-			.transition()
-			.duration(transitionDuration)
-			.style("opacity",0)
+		// chart.select(".vertical")
+		// 	.transition()
+		// 	.duration(transitionDuration)
+		// 	.style("opacity",0)
 
-		chart.select(".tooltip")
-			.transition()
-			.duration(tooltipTransitionDuration)
-			.style("opacity",0)
+		// chart.select(".tooltip")
+		// 	.transition()
+		// 	.duration(tooltipTransitionDuration)
+		// 	.style("opacity",0)
 	}
 
 	function updateChart() {
 		var w = chart.node().offsetWidth;
 		var h = Math.floor(w / ratio);
 		
-		var width = w - margin.left - margin.right;
-		var height = h - margin.top - margin.bottom;
+		width = w - margin.left - margin.right;
+		height = h - margin.top - margin.bottom;
 		
 		svg
 			.attr('width', w)
@@ -249,7 +246,8 @@
 		var area = d3.area()
 		    .x(function(d) { return scales[state].x(d.data.date); })
 		    .y0(function(d) { return scales[state].y(d[0]); })
-		    .y1(function(d) { return scales[state].y(d[1]); });
+		    .y1(function(d) { return scales[state].y(d[1]); })
+		    .curve(d3.curveMonotoneX)
 
 		stack.keys(['female_' + state, 'male_' + state])
 

@@ -99,6 +99,12 @@ main {
   width: 90%;
   max-width: 800px;
   margin: auto;
+  position: relative;
+}
+
+.chart__gender .tooltip {
+  position: absolute;
+  background: red;
 }
 
 .chart__genre {

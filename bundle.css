@@ -114,13 +114,14 @@ main {
   display: inline-block;
 }
 
-.gender__toggle .toggle__button {
+.genre__toggle li {
+  display: inline-block;
+}
+
+.toggle__button {
   padding: 0.25rem;
 }
 
-.gender__toggle .toggle__button .is-active {
-  fill: black;
-}
 
 div.tooltip {
   position: absolute;

@@ -2,34 +2,37 @@
 
 	//VARS
 	var genreData = null;
-	var width = 0;
-	var height = 0;
 	var scales = {};
 	var stack = null;
-	var area = null;
-	var chart = d3.select('.chart__genre');
+	var margin = { top:10, bottom:25, left:50, right:10 }
+	var ratio = 1.5;
 
+	var state = 'Percent'
+
+	var chart = d3.select('.chart__genre')
+	var svg = chart.select('svg')
 	// CLEANING FNS
 
 	function cleanRow(row, i, cols) {
+		var target = {}		
 		var columns = cols.slice(1)
 
 		var values = columns.map(function(columName) {
 			return +row[columName];
 		})
 
-		row.total = d3.sum(values)
+		target.total = d3.sum(values)
 
 		// create columns with number values
 		columns.forEach(function(columName, i) {
-			row[columName + 'Count'] = values[i];
-			row[columName + 'Percent'] = values[i] / row.total;
+			target[columName + 'Count'] = values[i];
+			target[columName + 'Percent'] = values[i] / target.total;
 		});
 
 		// update date
-		row.dateParsed = d3.timeParse('%Y')(row.date)
+		target.dateParsed = d3.timeParse('%Y')(row.date)
 
-		return row
+		return target
  	}
 
 
@@ -45,27 +48,31 @@
 	//SETUP
 	// GENRE HELPERS
 
-	function setupScales(keys){//, cp) {
-		maxy=0
+	function setupScales(keys){
 		// if (cp=='count') {
-		maxy = d3.max(genreData,function(d) { return d.total; })
-		// } else {
-			// if (cp=='percent') {
-				// maxy = 1;
-			// }
-		// }
-		scales.x = d3.scaleTime()
+		var maxCount = d3.max(genreData,function(d) { return d.total; })
+
+		var countX = d3.scaleTime()
 			.domain(d3.extent(genreData, function(d) { return d.dateParsed; }));
-		scales.y = d3.scaleLinear()
-			.domain([0,maxy]);
-		scales.z = d3.scaleOrdinal(d3.schemeCategory20)
-		scales.z.domain(keys)
+		
+		var countY = d3.scaleLinear().domain([0,maxCount])
+
+		var countColor = d3.scaleOrdinal(d3.schemeCategory20).domain(keys)
+
+		scales.Count = {x:countX, y:countY, z:countColor}
+
+		var percentX = d3.scaleTime()
+			.domain(d3.extent(genreData, function(d) { return d.dateParsed; }));
+
+		var percentY = d3.scaleLinear()
+
+		var percentColor = d3.scaleOrdinal(d3.schemeCategory20).domain(keys)
+
+		scales.Percent = {x:percentX, y:percentY, z:percentColor}
 	}
 
-	function makeChartElements(svg) {
-		var g = svg.append('g')
-			.attr("class","container");
-
+	function makeChartElements() {
+		var g = svg.select('.container');
 
 		var layer = g.selectAll(".area")
 			.data(stack(genreData))
@@ -84,23 +91,16 @@
 	function setupChart() {
 		// set up the DOM elements
   		var keys = genreData.columns.slice(1);
-  		keys.forEach(function(key) {
-  			return key + 'Count'
+  		keys = keys.map(function(key) {
+  			return key + state
   		})
+  		console.log("keys",keys)
 		stack = d3.stack()
 		stack.keys(keys)
-		// console.log('stack',stack(genreData))
-		var svg = chart.select('svg');
-
 		// setup scales
 		setupScales(keys)
 
-		area = d3.area()
-		    .x(function(d, i) { return scales.x(d.data.dateParsed); })
-		    .y0(function(d) { return scales.y(d[0]); })
-		    .y1(function(d) { return scales.y(d[1]); });
-
-		makeChartElements(svg)		
+		makeChartElements()		
 	}
 
 
@@ -110,55 +110,71 @@
 	//HELPERS
 
 	function updateScales(width,height){
-		scales.x.range([0, width]);
-		scales.y.range([height,0]);
+		console.log("scales3",scales[state])
+		scales[state].x.range([0, width]);
+
+		scales[state].y.range([height,0]);
 	}
 
-	function drawAxes(svg){
-		var xaxis = svg.select(".axis--x")
+	function drawAxes(height){
+		console.log(state)
+		svg.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisBottom(scales.x))
+			.call(d3.axisBottom(scales[state].x))
 
-		var yaxis = svg.select(".axis--y")
-			.call(d3.axisLeft(scales.y).ticks(10))
-
-		// console.log(yaxis)
-		// If axisBottom and axisLeft, the ticks get cut off by 
-		// the svg's boundaries. If I add padding on the svg
-		// in the CSS it looks funny -- I probably should be 
-		// fetching that element from the dom somewhere
+		svg.select(".axis--y")
+			.call(d3.axisLeft(scales[state].y).ticks(10))
 	}
 
 	function updateChart() {
-		margin = {top:10,bottom:25,left:28,right:10}
-		const ratio = 1.5;
-		svg_width = chart.node().offsetWidth
-		svg_height =  Math.floor(svg_width / ratio)
-		width = svg_width - margin.left - margin.right;
-		height = svg_height - margin.top - margin.bottom;
+		var svg_width = chart.node().offsetWidth
+		var svg_height =  Math.floor(svg_width / ratio)
+
+		var width = svg_width - margin.left - margin.right;
+		var height = svg_height - margin.top - margin.bottom;
 		
-		var svg = chart.select('svg')
+		svg
 			.attr('width', svg_width)
 			.attr('height', svg_height);
 
+		var translate = "translate(" + margin.left + "," + margin.top + ")"
 		var g = svg.select('.container')
-				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+				
+		g.attr("transform", translate)
 
 		g.attr('width', width)
 			.attr('height', height);
 
 		updateScales(width,height)
 
+		var area = d3.area()
+		    .x(function(d, i) { return scales[state].x(d.data.dateParsed); })
+		    .y0(function(d) { return scales[state].y(d[0]); })
+		    .y1(function(d) { return scales[state].y(d[1]); });
+
 		// redraw elements
-		drawAxes(svg)
+		drawAxes(height)
 
 		var layer = svg.selectAll(".area")
 				.attr("d", area)
-		      	.style("fill", function(d) { return scales.z(d.key); })
+		      	.style("fill", function(d) { return scales[state].z(d.key); })
+	}
+
+	function handleToggle() {
+		console.log("handling toggling!")
+		if (this.value != state) {
+			state = this.value
+			updateChart()
+		}
+	}
+
+	function setupEvents() {
+		chart.selectAll('.toggle__button').on('click', handleToggle)
 	}
 
 	function setup() {
 		setupChart()
+		setupEvents()
 	}
 
 	function resize() {
@@ -167,6 +183,7 @@
 
 	function init() {
 		loadData(function() {
+			console.log(genreData)
 			setup()
 			resize()
 			window.addEventListener('resize', resize)

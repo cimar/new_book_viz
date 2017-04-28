@@ -75,6 +75,8 @@
 	function setupElements() {
 		var g = svg.select('.container');
 
+		g.append('g').attr('class', 'area-container');
+
 		g.append('g').attr('class', 'axis axis--x');
 
 		g.append('g').attr('class', 'axis axis--y');
@@ -93,6 +95,17 @@
 		svg.append("text")
 			.attr("class","label--x")
 			.attr("text-anchor","middle")
+
+		g.append("text")
+			.attr("class","area__label__men")
+			.style("text-anchor", "end")
+			.text("Men");
+
+		g.append("text")
+			.attr("class","area__label__women")
+			.style("text-anchor", "end")
+			.text("Women");
+
 
       	chart.append("div") 
       		.attr("class", "tooltip")  
@@ -120,34 +133,25 @@
 			.call(d3.axisLeft(scales[state].y).ticks(10))
 	}
 
-	function drawLabels(g, width, height){
+	function drawLabels(g, width, height) {
 		svg.select('.label--y')
 			.text(labels[state])
 		.transition()
 			.duration(transitionDuration)
 			.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
 
-		// rosie fix these labels to only be created on setup like above
-		var wable = g.select(".area__label__women")
+		g.select(".area__label__women")
+			.transition()
+			.duration(transitionDuration)
+			.attr("x", .95 * width)
+			.attr("y", .95 * height)
 
-		if (wable.empty()){
-			g.append("text")
-				.attr("class","area__label__women")
-				.attr("x", .9*width)
-				.attr("y", .75*height)
-				.style("text-anchor", "end")
-				.text("Women");
-		}
-		var mable = g.select(".area__label__men")
-
-		if (mable.empty()){
-			g.append("text")
-				.attr("class","area__label__men")
-				.attr("x", .9*width)
-				.attr("y", .25*height)
-				.style("text-anchor", "end")
-				.text("Men");
-		}
+		g.select(".area__label__men")
+			.transition()
+			.duration(transitionDuration)
+			.attr("x", .95 * width)
+			.attr("y", .45 * height)
+			.style("text-anchor", "end")
 	}
 
 	function drawFiftyPercent(g) {
@@ -253,7 +257,9 @@
 
 		console.log(stackedData)
 
-		var layer = g.selectAll('.area')
+		var container = chart.select('.area-container')
+
+		var layer = container.selectAll('.area')
 			.data(stackedData)
 
 		layer.exit().remove()

@@ -98,8 +98,6 @@
       		.attr("class", "tooltip")  
       		.style("z-index", "19")     
       		.style("opacity", 0);
-
-
 	}
 	
 	//UPDATE

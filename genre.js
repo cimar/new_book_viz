@@ -3,11 +3,12 @@
 	//VARS
 	var genreData = null;
 	var scales = {};
-	var stack = null;
 	var margin = { top:10, bottom:25, left:50, right:10 }
 	var ratio = 1.5;
+	var stack = d3.stack();
+	var transitionDuration = 1000;
 
-	var state = 'Percent'
+	var state = 'percent'
 
 	var chart = d3.select('.chart__genre')
 	var svg = chart.select('svg')
@@ -25,8 +26,8 @@
 
 		// create columns with number values
 		columns.forEach(function(columName, i) {
-			target[columName + 'Count'] = values[i];
-			target[columName + 'Percent'] = values[i] / target.total;
+			target[columName + '_count'] = values[i];
+			target[columName + '_percent'] = values[i] / target.total;
 		});
 
 		// update date
@@ -48,7 +49,9 @@
 	//SETUP
 	// GENRE HELPERS
 
-	function setupScales(keys){
+	function setupScales() {
+		var keys = genreData.columns.slice(1);
+
 		// if (cp=='count') {
 		var maxCount = d3.max(genreData,function(d) { return d.total; })
 
@@ -57,28 +60,22 @@
 		
 		var countY = d3.scaleLinear().domain([0,maxCount])
 
-		var countColor = d3.scaleOrdinal(d3.schemeCategory20).domain(keys)
-
-		scales.Count = {x:countX, y:countY, z:countColor}
+		scales.count = {x:countX, y:countY}
 
 		var percentX = d3.scaleTime()
 			.domain(d3.extent(genreData, function(d) { return d.dateParsed; }));
 
 		var percentY = d3.scaleLinear()
 
-		var percentColor = d3.scaleOrdinal(d3.schemeCategory20).domain(keys)
+		scales.percent = {x:percentX, y:percentY}
 
-		scales.Percent = {x:percentX, y:percentY, z:percentColor}
+
+
+		scales.color = d3.scaleOrdinal(d3.schemeCategory20).domain(keys)
 	}
 
-	function makeChartElements() {
+	function setupElements() {
 		var g = svg.select('.container');
-
-		var layer = g.selectAll(".area")
-			.data(stack(genreData))
-			.enter()
-		  	.append("path")
-		      .attr("class", "area")	
 
 		g.append('g')
 			.attr('class', 'axis axis--x');
@@ -88,21 +85,6 @@
 
 	// SET UP GENRE
 
-	function setupChart() {
-		// set up the DOM elements
-  		var keys = genreData.columns.slice(1);
-  		keys = keys.map(function(key) {
-  			return key + state
-  		})
-  		console.log("keys",keys)
-		stack = d3.stack()
-		stack.keys(keys)
-		// setup scales
-		setupScales(keys)
-
-		makeChartElements()		
-	}
-
 
 
 	//UPDATE
@@ -110,14 +92,12 @@
 	//HELPERS
 
 	function updateScales(width,height){
-		console.log("scales3",scales[state])
 		scales[state].x.range([0, width]);
 
 		scales[state].y.range([height,0]);
 	}
 
 	function drawAxes(height){
-		console.log(state)
 		svg.select(".axis--x")
 			.attr("transform", "translate(0," + height + ")")
 			.call(d3.axisBottom(scales[state].x))
@@ -152,16 +132,38 @@
 		    .y0(function(d) { return scales[state].y(d[0]); })
 		    .y1(function(d) { return scales[state].y(d[1]); });
 
+		var keys = genreData.columns.slice(1).map(function(key) {
+			return key + '_' + state;
+		});
+
+	  	stack.keys(keys)
+
+	  	var stackedData = stack(genreData)
+
 		// redraw elements
 		drawAxes(height)
 
-		var layer = svg.selectAll(".area")
-				.attr("d", area)
-		      	.style("fill", function(d) { return scales[state].z(d.key); })
+		var layer = g.selectAll('.area')
+			.data(stackedData)
+
+		layer.exit().remove()
+
+		var enterLayer = layer.enter()
+			.append('path')
+			.attr('class', 'area')
+
+
+		layer.merge(enterLayer)
+	    	.transition()
+	    	.duration(transitionDuration)
+	    	.attr('d', area)
+	      	.style("fill", function(d) { 
+		      		var key = d.key.split('_')[0]
+		      		return scales.color(key);
+		      	})
 	}
 
 	function handleToggle() {
-		console.log("handling toggling!")
 		if (this.value != state) {
 			state = this.value
 			updateChart()
@@ -169,12 +171,7 @@
 	}
 
 	function setupEvents() {
-		chart.selectAll('.toggle__button').on('click', handleToggle)
-	}
-
-	function setup() {
-		setupChart()
-		setupEvents()
+		chart.selectAll('.toggle__button').on('click', handleToggle);
 	}
 
 	function resize() {
@@ -183,8 +180,10 @@
 
 	function init() {
 		loadData(function() {
-			console.log(genreData)
-			setup()
+			setupElements()
+			setupScales()
+			resize() // draw chart
+			setupEvents()
 			resize()
 			window.addEventListener('resize', resize)
 		})

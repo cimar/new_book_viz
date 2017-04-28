@@ -12,47 +12,30 @@
 	// CLEANING FNS
 
 	function cleanRow(row, i, cols) {
-		var columns = cols.slice(1, cols.length)
+		var columns = cols.slice(1)
 
 		var values = columns.map(function(columName) {
 			return +row[columName];
 		})
 
-		var total = d3.sum(values)
+		row.total = d3.sum(values)
 
-		var things = columns.map(function(columName, i) {
-			var out = {};
-			out[columName + 'Count'] = values[i];
-			out[columName + 'Percent'] = values[i] / total;
-			return out;
+		// create columns with number values
+		columns.forEach(function(columName, i) {
+			row[columName + 'Count'] = values[i];
+			row[columName + 'Percent'] = values[i] / row.total;
 		});
 
-		
-		// var target = {}
- 	// 	var total = 0
-		// // 		target.dateStr = row.date
-		// target.date = d3.timeParse('%Y')(row.date)
-		// for (var i = 1, n = cols.length; i < n; ++i){
-		// 	field = cols[i]
-		// 	target[field] = +row[field]
-		// 	total = total + +row[field]
-		// }
-		// target["total"] = total
-		// /*		target["count"]["total"] = total
-		// target["count"]["columns"] = count_cols
-		// for (var i = 1, n = cols.length; i < n; ++i){
-		// 	field = cols[i]
-		// 	target["percent"][field] = +row[field]/total
-		// }
-		// console.log("target")*/
-		// return target;
+		// update date
+		row.dateParsed = d3.timeParse('%Y')(row.date)
+
+		return row
  	}
 
 
 	// LOAD THE DATA
 	function loadData(cb) {
 		d3.tsv('assets/genre_count.tsv', cleanRow, function(err, data) {
-			console.log(data)
 			genreData = data
 			cb()
 		});
@@ -72,7 +55,7 @@
 			// }
 		// }
 		scales.x = d3.scaleTime()
-			.domain(d3.extent(genreData, function(d) { return d.date; }));
+			.domain(d3.extent(genreData, function(d) { return d.dateParsed; }));
 		scales.y = d3.scaleLinear()
 			.domain([0,maxy]);
 		scales.z = d3.scaleOrdinal(d3.schemeCategory20)
@@ -82,6 +65,7 @@
 	function makeChartElements(svg) {
 		var g = svg.append('g')
 			.attr("class","container");
+
 
 		var layer = g.selectAll(".area")
 			.data(stack(genreData))
@@ -100,17 +84,19 @@
 	function setupChart() {
 		// set up the DOM elements
   		var keys = genreData.columns.slice(1);
+  		keys.forEach(function(key) {
+  			return key + 'Count'
+  		})
 		stack = d3.stack()
 		stack.keys(keys)
-		// console.log('keys',keys)
 		// console.log('stack',stack(genreData))
 		var svg = chart.select('svg');
 
 		// setup scales
-		setupScales(keys)//,cp)
+		setupScales(keys)
 
 		area = d3.area()
-		    .x(function(d, i) { return scales.x(d.data.date); })
+		    .x(function(d, i) { return scales.x(d.data.dateParsed); })
 		    .y0(function(d) { return scales.y(d[0]); })
 		    .y1(function(d) { return scales.y(d[1]); });
 
@@ -181,7 +167,6 @@
 
 	function init() {
 		loadData(function() {
-			// console.log("genre",genreData)
 			setup()
 			resize()
 			window.addEventListener('resize', resize)

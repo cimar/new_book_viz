@@ -100,6 +100,14 @@
 			.attr("class","area__label area__label--women")
 			.style("text-anchor", "end")
 			.text("Women");
+
+		g.append("line")
+			.attr("class","fifty-percent")
+
+		g.append("text")
+			.attr("class","fifty-percent-label")
+			.text("Gender Equality (50%)")
+
 	}
 	
 	//UPDATE
@@ -122,6 +130,45 @@
 			.call(d3.axisLeft(scales[state].y).ticks(10))
 	}
 
+	function xToD(x,data){
+		var invertedX = scales[state].x.invert(x)
+
+	    var bisectDate = d3.bisector(d => d.date).left;
+
+	    var index = bisectDate(data, invertedX, 1)
+
+		var d0 = data[index - 1];
+		var d1 = data[index];
+		
+		var d = invertedX - d0.date > d1.date - invertedX ? d1 : d0;
+
+		return d
+	}
+
+	//this is needlessly complicated but works for now
+
+	function setLabelY(key,width,height){
+
+		if(state == "percent"){
+			if(key == "male"){
+				return scales[state].y(.55)
+			}else{
+				return scales[state].y(.05)
+			}
+		}
+		var d = xToD(.9*width,genderData)
+
+		k = key+"_count"
+
+		console.log(k,d[k])
+
+		if(key == "male"){
+			return scales[state].y((d["female_"+state]+d[k]/2))
+		} else {
+			return scales[state].y((d[k]/2))
+		}
+	}
+
 	function drawLabels(g, width, height) {
 		svg.select('.label--y')
 			.text(labels[state])
@@ -129,45 +176,22 @@
 			.duration(transitionDuration)
 			.attr("transform", "translate("+ (margin.left/4) +","+(height/2)+")rotate(-90)")
 
+		var yMen = setLabelY("male",width,height)
+		var yWomen = setLabelY("female",width,height)
+
 		g.select(".area__label--women")
 			.transition()
 			.duration(transitionDuration)
-			.attr("x", .95 * width)
-			.attr("y", .95 * height)
+			.attr("x", .9 * width)
+			.attr("y", yWomen)
+			.style("text-anchor", "middle")
 
 		g.select(".area__label--men")
 			.transition()
 			.duration(transitionDuration)
-			.attr("x", .95 * width)
-			.attr("y", .45 * height)
-			.style("text-anchor", "end")
-	}
-
-	function drawFiftyPercent(g) {
-		var line = d3.line()
-			.x(function(d) {
-				return scales[state].x(d.date)
-			})
-			.y(function(d) {
-				if (state == 'percent'){
-					return scales[state].y(.5)
-				} else {
-					return scales[state].y((d["total"])/2)
-				}
-			})
-
-		var fif = g.select(".fifty-percent")
-
-		if (fif.empty()) {
-			fif = g.append("path")
-				.attr("class","fifty-percent")
-		}
-
-		fif.datum(genderData)
-			.transition()
-			.duration(transitionDuration)
-			.attr("d",line)
-		return fif
+			.attr("x", .9 * width)
+			.attr("y", yMen)
+			.style("text-anchor", "middle")
 	}
 
 	function handleMouseMove(d) {
@@ -262,8 +286,6 @@
 		drawAxes(g, height)
 		drawLabels(g, width, height)
 
-		var fif = drawFiftyPercent(g)
-
 		vertical = g.select(".vertical")
 			.attr("height", height)
       		.attr("y", 0)
@@ -277,6 +299,25 @@
 	      		return scales.color(key);
 	      	})
 
+	    console.log("1950",(d3.timeParse("%Y")("1950")))
+
+	    var opacity = state === 'percent' ? 1 : 0;
+      	g.select(".fifty-percent")
+      		.attr("x1",scales["percent"].x(d3.timeParse("%Y")("1950")))
+        	.attr("y1",scales["percent"].y(.5))
+        	.attr("x2",scales["percent"].x(d3.timeParse("%Y")("2017")))
+        	.attr("y2",scales["percent"].y(.5))
+      		.transition()
+      		.duration(transitionDuration)
+      		.style("opacity",opacity)
+
+      	g.select(".fifty-percent-label")
+      		.attr("x",width/2)
+      		.attr("y",scales["percent"].y(.5))
+      		.attr("text-anchor","middle")
+      		.transition()
+      		.duration(transitionDuration)
+      		.style("opacity",opacity)
 	}
 
 
